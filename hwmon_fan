@@ -1,0 +1,37 @@
+#!/bin/bash
+
+files=$(echo /sys/class/hwmon/hwmon*/fan*_input)
+
+if [ -n "$1" -a "$1" = "config" ]; then
+	echo "graph_title HW Driver Fan Speeds"
+	echo "graph_vlabel rpm"
+	echo "graph_category sensors"
+	echo "graph_info This graph shows the fan speeds reported by kernel drivers in /sys/class/hwmon/"
+	for f in $files; do
+		drivername=$(cat "$(dirname $f)/name")
+		labelfile=$(echo $f | sed -e 's/_input$/_label/g')
+		if [ -r $labelfile ]; then
+			label=$(cat $labelfile)
+		else
+			label=$(basename $f | sed -e 's/_.*//g')
+		fi
+		echo $(echo $f | awk -F/ '{print $5 "-" $6;}' | sed -e 's/_.*//g')".label" $drivername $label
+	done
+	exit 0
+fi
+
+if [ -n "$1" -a "$1" = "autoconf" ]; then
+	for f in $files; do
+		if [ ! -r $f ]; then
+			echo "no (cannot read $f)"
+			exit 0
+		fi
+	done
+	echo "yes"
+	exit 0
+fi
+
+for f in $files; do
+	echo $(echo $f | awk -F/ '{print $5 "-" $6;}' | sed -e 's/_.*//g')".value" $(cat $f)
+done
+
